@@ -1,12 +1,13 @@
 import socket
 import pickle
+import csv
 import numpy as np
 import matplotlib.pyplot as plt
 from tensorflow.keras.datasets import mnist
 
-HOST = "10.253.37.236"
+HOST = "10.253.51.130"
 PORT = 5000
-NUM_WORKERS = 1
+NUM_WORKERS = 3
 EPOCHS = 100  # Por ahora pequeño para pruebas rápidas
 LR = 0.1     # Learning rate locked at 0.1
 
@@ -42,7 +43,7 @@ def recv_data(conn):
         size = int.from_bytes(size_data, 'big')
         data = b''
         while len(data) < size:
-            packet = conn.recv(4096)
+            packet = conn.recv(min(4096, size - len(data)))
             if not packet: break
             data += packet
         return pickle.loads(data)
@@ -68,6 +69,10 @@ for i in range(NUM_WORKERS):
     workers.append(conn)
 
 # Bucle de entrenamiento
+log_file = open('training_logs.csv', mode='w', newline='')
+log_writer = csv.writer(log_file)
+log_writer.writerow(['Epoch', 'Accuracy'])
+
 for epoch in range(EPOCHS):
     # 1. Enviar pesos a todos
     for conn in workers:
@@ -95,10 +100,13 @@ for epoch in range(EPOCHS):
     acc = compute_accuracy(X_test, y_test, W1, b1, W2, b2)
     history_acc.append(acc)
     print(f"Epoch {epoch+1}/{EPOCHS} - Accuracy: {acc:.4f}")
+    log_writer.writerow([epoch + 1, acc])
+    log_file.flush()
 
 print("Entrenamiento finalizado. Cerrando conexiones...")
 for conn in workers: conn.close()
 server.close()
+log_file.close()
 
 # Graficar resultados
 plt.figure(figsize=(8, 5))

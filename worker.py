@@ -3,7 +3,7 @@ import pickle
 import numpy as np
 from tensorflow.keras.datasets import mnist
 
-HOST = "10.253.46.239"
+HOST = "10.253.51.130"
 PORT = 5000
 
 def one_hot(y, num_classes=10):
@@ -47,7 +47,7 @@ def recv_data(sock):
     size = int.from_bytes(size_data, 'big')
     data = b''
     while len(data) < size:
-        packet = sock.recv(4096)
+        packet = sock.recv(min(4096, size - len(data)))
         if not packet: break
         data += packet
     return pickle.loads(data)
